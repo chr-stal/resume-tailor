@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Markdown · {{ name }} · resume-tailor{% endblock %}
+{% block content %}
+
+<nav class="breadcrumbs">
+  <a href="{{ url_for('index') }}">all runs</a> ·
+  <a href="{{ url_for('run_view', name=name) }}">{{ name }}</a> ·
+  <strong>final markdown</strong>
+</nav>
+
+<h2>Final markdown</h2>
+<p class="muted">Editing: <code>{{ source }}</code></p>
+
+<form method="post" action="{{ url_for('markdown_view', name=name) }}" class="md-form">
+  <textarea name="content" rows="32" spellcheck="true">{{ content }}</textarea>
+  <div class="actions">
+    <button type="submit" name="rebuild" value="0">Save</button>
+    <button type="submit" name="rebuild" value="1">Save &amp; rebuild PDF</button>
+    {% if info.has_pdf or info.has_html %}
+    <a href="{{ url_for('pdf_view', name=name) }}" target="_blank" class="btn secondary">
+      Open current {{ 'PDF' if info.has_pdf else 'HTML' }}
+    </a>
+    {% endif %}
+  </div>
+</form>
+
+{% endblock %}

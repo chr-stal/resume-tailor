@@ -67,12 +67,26 @@ def build_parser() -> argparse.ArgumentParser:
     pall.add_argument("--model")
     pall.add_argument("--html-only", action="store_true")
 
+    # serve (web UI)
+    psv = sub.add_parser("serve", help="Launch the local web UI on http://127.0.0.1:8000.")
+    psv.add_argument("--host", default="127.0.0.1", help="Bind address (default 127.0.0.1).")
+    psv.add_argument("--port", type=int, default=8000, help="Port (default 8000).")
+    psv.add_argument("--debug", action="store_true", help="Enable Flask debug mode.")
+
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     _maybe_load_dotenv()
     args = build_parser().parse_args(argv)
+
+    # `serve` is the only command without a workdir.
+    if args.command == "serve":
+        from resume_tailor.web.app import create_app
+        app = create_app()
+        print(f"\n  resume-tailor → http://{args.host}:{args.port}\n", flush=True)
+        app.run(host=args.host, port=args.port, debug=args.debug)
+        return 0
 
     wd = open_workdir(args.workdir)
 

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="panel">
+  <h2>Runs</h2>
+  {% if runs %}
+  <ul class="run-list">
+    {% for r in runs %}
+    <li>
+      <a href="{{ url_for('run_view', name=r.name) }}" class="run-name">{{ r.name }}</a>
+      <span class="status-dots">
+        <span class="dot {{ 'on' if r.has_input        else 'off' }}" title="input ready">input</span>
+        <span class="dot {{ 'on' if r.has_suggestions  else 'off' }}" title="review ran">review</span>
+        <span class="dot {{ 'on' if r.has_decisions    else 'off' }}" title="decisions saved">decisions</span>
+        <span class="dot {{ 'on' if r.has_final_md     else 'off' }}" title="final markdown built">final.md</span>
+        <span class="dot {{ 'on' if r.has_pdf          else 'off' }}" title="PDF rendered">pdf</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No runs yet — create one below.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Create a new run</h2>
+  <form method="post" action="{{ url_for('create_run') }}" class="form-create">
+    <label>
+      <span>Run name</span>
+      <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
+             placeholder="acme-pm-2026-05" autocomplete="off">
+      <small class="muted">lowercase letters, numbers, hyphens, underscores</small>
+    </label>
+
+    <label>
+      <span>Resume (Markdown)</span>
+      <textarea name="resume" rows="14" required
+                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
+    </label>
+
+    <label>
+      <span>Job description (plain text)</span>
+      <textarea name="jd" rows="14" required
+                placeholder="Paste the JD here…"></textarea>
+    </label>
+
+    <button type="submit">Create run</button>
+  </form>
+</section>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Approve · {{ name }} · resume-tailor{% endblock %}
+{% block content %}
+
+<nav class="breadcrumbs">
+  <a href="{{ url_for('index') }}">all runs</a> ·
+  <a href="{{ url_for('run_view', name=name) }}">{{ name }}</a> ·
+  <strong>approve</strong>
+</nav>
+
+<div class="approve-header">
+  <h2>Approve suggestions</h2>
+  <p class="muted summary-line" data-role="summary">
+    {{ summary.total }} / {{ suggestions|length }} decided ·
+    {{ summary.approved }} approved · {{ summary.edited }} edited · {{ summary.denied }} denied
+  </p>
+</div>
+
+<details class="jd-panel">
+  <summary>Job description</summary>
+  <pre>{{ jd }}</pre>
+</details>
+
+<ol class="suggestions" data-run="{{ name }}">
+  {% for s in suggestions %}
+  {% set d = decisions.get(s.id) %}
+  <li class="suggestion {% if d %}has-decision decision-{{ d.action }}{% endif %}"
+      data-id="{{ s.id }}" data-type="{{ s.type }}">
+    <header>
+      <span class="sid">{{ s.id }}</span>
+      <span class="section">{{ s.section }}</span>
+      <span class="kind">{{ s.type }}</span>
+      <span class="priority p-{{ s.priority }}">{{ s.priority }}</span>
+      {% if d %}<span class="decision-tag tag-{{ d.action }}">{{ d.action }}</span>{% endif %}
+    </header>
+
+    {% if s.type in ['replace', 'delete'] and s.original_text %}
+    <div class="block original">
+      <h4>Original</h4>
+      <pre>{{ s.original_text }}</pre>
+    </div>
+    {% endif %}
+
+    {% if s.type in ['replace', 'insert'] %}
+    <div class="block suggested">
+      <h4>Suggested {% if s.type == 'insert' %}<span class="muted">(insert under: {{ s.section }})</span>{% endif %}</h4>
+      <textarea data-role="suggested" rows="5">{% if d and d.action in ['approve','edit'] %}{{ d.final_text }}{% else %}{{ s.suggested_text }}{% endif %}</textarea>
+    </div>
+    {% endif %}
+
+    {% if s.rationale %}
+    <p class="rationale"><em>{{ s.rationale }}</em></p>
+    {% endif %}
+
+    <div class="actions">
+      <button data-action="approve" class="btn-approve {% if d and d.action == 'approve' %}active{% endif %}">Approve</button>
+      {% if s.type in ['replace', 'insert'] %}
+      <button data-action="edit"    class="btn-edit    {% if d and d.action == 'edit'    %}active{% endif %}">Save edit</button>
+      {% endif %}
+      <button data-action="deny"    class="btn-deny    {% if d and d.action == 'deny'    %}active{% endif %}">Deny</button>
+    </div>
+    <p class="status muted" data-role="status"></p>
+  </li>
+  {% endfor %}
+</ol>
+
+<p class="actions-bottom">
+  <a href="{{ url_for('run_view', name=name) }}" class="btn secondary">← Back to dashboard</a>
+</p>
+
+{% endblock %}
