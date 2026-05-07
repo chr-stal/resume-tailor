@@ -1,0 +1,21 @@
+Senior Backend Engineer — Payments Platform
+
+We're hiring a Senior Backend Engineer for our Payments Platform team. You'll
+own the services that move money through our product, working closely with
+product, fraud, and compliance teams.
+
+What you'll do:
+- Design, build, and operate high-throughput payment services in Python.
+- Improve the reliability and observability of our billing and invoicing pipeline.
+- Lead the design of new subsystems and review the work of more junior engineers.
+- Partner with our fraud team to ship safer money-movement workflows.
+- Drive incremental migrations from our legacy monolith to focused services.
+
+What we're looking for:
+- 4+ years of backend experience, with significant time in Python.
+- Experience operating production services with on-call responsibilities.
+- Comfortable with PostgreSQL, queueing systems, and event-driven architectures.
+- A track record of mentoring teammates and raising the bar on code quality.
+- Bonus: prior experience with billing, payments, or any regulated domain.
+
+Tech you'll touch: Python, PostgreSQL, Kafka, Kubernetes, AWS, Datadog.

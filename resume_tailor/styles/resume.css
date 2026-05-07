@@ -1,0 +1,116 @@
+/*
+ * ATS-friendly resume stylesheet.
+ *
+ * Design rules (these matter for resume parsers, not just looks):
+ *   - Single column. No CSS columns, no multi-column layout, no floats.
+ *   - Real text only. No background images of text, no SVG glyphs in place of
+ *     letters. ATS systems read the underlying text run.
+ *   - Standard headings (h1, h2, h3) for sections so structure is preserved.
+ *   - System / web-safe fonts. No embedded icon fonts.
+ *   - Plain bullets. No icons or emoji as list markers.
+ *   - Adequate margins so PDF→text extraction doesn't smash content.
+ */
+
+@page {
+  size: Letter;
+  margin: 0.6in 0.7in;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  color: #1a1a1a;
+}
+
+/* --- Name (top h1) --- */
+h1 {
+  font-size: 20pt;
+  font-weight: 700;
+  margin: 0 0 0.05in 0;
+  letter-spacing: 0.3px;
+}
+
+/* --- Section headings (Experience, Education, ...) --- */
+h2 {
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0.18in 0 0.05in 0;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #1a1a1a;
+}
+
+/* --- Job titles / subsection headings --- */
+h3 {
+  font-size: 10.5pt;
+  font-weight: 700;
+  margin: 0.1in 0 0.02in 0;
+}
+
+/* --- Inline emphasis --- */
+strong { font-weight: 700; }
+em     { font-style: italic; }
+
+/* --- Paragraphs --- */
+p {
+  margin: 0 0 0.06in 0;
+}
+
+/* The line directly under the name typically has contact info — give it
+ * some breathing room. */
+h1 + p {
+  margin-bottom: 0.12in;
+  color: #333;
+  font-size: 10pt;
+}
+
+/* --- Lists --- */
+ul, ol {
+  margin: 0.02in 0 0.08in 0;
+  padding-left: 0.22in;
+}
+
+li {
+  margin-bottom: 0.025in;
+  page-break-inside: avoid;
+}
+
+/* No nested-list visual change — just keep them tidy. */
+ul ul, ol ol, ul ol, ol ul {
+  margin: 0.02in 0;
+}
+
+/* --- Links --- */
+a {
+  color: #1a1a1a;
+  text-decoration: none;
+}
+
+/* --- Horizontal rule (rarely useful in a resume; keep subtle if used) --- */
+hr {
+  border: 0;
+  border-top: 0.5pt solid #999;
+  margin: 0.12in 0;
+}
+
+/* --- Avoid awkward page breaks inside a job entry --- */
+h2, h3 {
+  page-break-after: avoid;
+}
+
+/* --- Code (rare in resumes, but render it sensibly if present) --- */
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 9.5pt;
+}
