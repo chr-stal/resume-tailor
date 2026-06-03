@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Layout · {{ name }} · resume-tailor{% endblock %}
+
+{% macro field(label, key, unit, step=0.1) %}
+<label class="style-field">
+  <span>{{ label }}</span>
+  <span class="input-row">
+    <input type="number" step="{{ step }}" name="{{ key }}"
+           value="{{ '%g' % style[key] }}"
+           placeholder="{{ '%g' % defaults[key] }}">
+    {% if unit %}<span class="unit">{{ unit }}</span>{% endif %}
+  </span>
+  <small class="muted">default: {{ '%g' % defaults[key] }}{{ unit }}</small>
+</label>
+{% endmacro %}
+
+{% block content %}
+
+<nav class="breadcrumbs">
+  <a href="{{ url_for('index') }}">all runs</a> ·
+  <a href="{{ url_for('run_view', name=name) }}">{{ name }}</a> ·
+  <strong>tune layout</strong>
+</nav>
+
+<h2>Tune layout</h2>
+<p class="muted">
+  Changes affect this run only (stored at <code>{{ name }}/style.json</code>).
+  Leave a field blank to fall back to the default for that key.
+  {% if has_overrides %}
+  <br>This run currently has custom overrides.
+  {% else %}
+  <br>This run is using all defaults — no <code>style.json</code> yet.
+  {% endif %}
+</p>
+
+<section class="panel">
+  <h3>Presets</h3>
+  <p class="muted">Click a preset to fill the form. Then <em>Save &amp; rebuild PDF</em> to apply.</p>
+  <div class="preset-buttons" data-role="presets">
+    {% for preset_name, preset in presets.items() %}
+    <button type="button" class="btn secondary" data-preset='{{ preset|tojson }}'>{{ preset_name }}</button>
+    {% endfor %}
+    <button type="button" class="btn secondary" data-action="reset">Reset to defaults</button>
+  </div>
+</section>
+
+<form method="post" action="{{ url_for('style_view', name=name) }}" class="style-form">
+  <section class="panel">
+    <h3>Body &amp; spacing</h3>
+    <div class="style-grid">
+      {{ field("Body font size",   "font_size_pt",          "pt",  step=0.25) }}
+      {{ field("Line height",      "line_height",           "",    step=0.05) }}
+      {{ field("Bullet spacing",   "bullet_spacing_in",     "in",  step=0.005) }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Page margins</h3>
+    <div class="style-grid">
+      {{ field("Top / bottom margin", "page_margin_top_in",  "in", step=0.05) }}
+      {{ field("Left / right margin", "page_margin_side_in", "in", step=0.05) }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Headings</h3>
+    <div class="style-grid">
+      {{ field("Name (H1)",        "name_size_pt",          "pt",  step=0.5) }}
+      {{ field("Section (H2)",     "section_size_pt",       "pt",  step=0.25) }}
+      {{ field("Subsection (H3)",  "subsection_size_pt",    "pt",  step=0.25) }}
+      {{ field("Section spacing above", "section_spacing_in",    "in", step=0.01) }}
+      {{ field("Subsection spacing above", "subsection_spacing_in", "in", step=0.01) }}
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="submit" name="rebuild" value="0">Save</button>
+    <button type="submit" name="rebuild" value="1">Save &amp; rebuild PDF</button>
+    {% if info.has_pdf or info.has_html %}
+    <a href="{{ url_for('pdf_view', name=name) }}" target="_blank" class="btn secondary">
+      Open current {{ 'PDF' if info.has_pdf else 'HTML' }}
+    </a>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+  // Wire preset buttons: clicking one fills the form. "Reset" clears overrides.
+  (function () {
+    const form = document.querySelector('.style-form');
+    if (!form) return;
+    document.querySelectorAll('[data-role="presets"] button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.action === 'reset') {
+          form.querySelectorAll('input[type=number]').forEach((i) => (i.value = ''));
+          return;
+        }
+        const preset = JSON.parse(btn.dataset.preset);
+        Object.entries(preset).forEach(([k, v]) => {
+          const input = form.querySelector(`input[name="${k}"]`);
+          if (input) input.value = v;
+        });
+      });
+    });
+  })();
+</script>
+
+{% endblock %}

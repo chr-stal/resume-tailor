@@ -72,13 +72,14 @@
       <input type="hidden" name="html_only" value="1">
       <button type="submit" class="secondary">Build HTML only</button>
     </form>
-    {% if info.has_pdf or info.has_html %}
     <p>
+      {% if info.has_pdf or info.has_html %}
       <a href="{{ url_for('pdf_view', name=name) }}" target="_blank" class="btn">
         Open {{ 'PDF' if info.has_pdf else 'HTML' }}
       </a>
+      {% endif %}
+      <a href="{{ url_for('style_view', name=name) }}" class="btn secondary">Tune layout</a>
     </p>
-    {% endif %}
   </article>
 
 </section>

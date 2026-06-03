@@ -67,6 +67,17 @@ def build_parser() -> argparse.ArgumentParser:
     pall.add_argument("--model")
     pall.add_argument("--html-only", action="store_true")
 
+    # render (one-shot Markdown -> PDF, no LLM, no workdir)
+    prend = sub.add_parser(
+        "render",
+        help="Render a Markdown file directly to PDF — no Claude, no workdir.",
+    )
+    prend.add_argument("--input", required=True, help="Path to your Markdown resume.")
+    prend.add_argument("--output", required=True, help="Path to write the PDF (or HTML if --html-only).")
+    prend.add_argument("--preset", help="Use a named style preset (default/compact/ultra-compact).")
+    prend.add_argument("--style", help="Path to a style.json file with layout overrides.")
+    prend.add_argument("--html-only", action="store_true", help="Write HTML instead of PDF.")
+
     # serve (web UI)
     psv = sub.add_parser("serve", help="Launch the local web UI on http://127.0.0.1:8000.")
     psv.add_argument("--host", default="127.0.0.1", help="Bind address (default 127.0.0.1).")
@@ -80,7 +91,44 @@ def main(argv: list[str] | None = None) -> int:
     _maybe_load_dotenv()
     args = build_parser().parse_args(argv)
 
-    # `serve` is the only command without a workdir.
+    # `render` is a one-shot — no workdir.
+    if args.command == "render":
+        import json as _json
+        from resume_tailor.build import PRESETS, render_markdown
+
+        input_path = Path(args.input)
+        if not input_path.exists():
+            print(f"Input not found: {input_path}", file=sys.stderr)
+            return 2
+
+        style: dict = {}
+        if args.preset:
+            if args.preset not in PRESETS:
+                print(
+                    f"Unknown preset {args.preset!r}. Choose one of: "
+                    f"{', '.join(PRESETS)}",
+                    file=sys.stderr,
+                )
+                return 2
+            style.update(PRESETS[args.preset])
+        if args.style:
+            style_path = Path(args.style)
+            if not style_path.exists():
+                print(f"Style file not found: {style_path}", file=sys.stderr)
+                return 2
+            with style_path.open() as f:
+                style.update(_json.load(f))
+
+        md_text = input_path.read_text(encoding="utf-8")
+        render_markdown(
+            md_text,
+            Path(args.output),
+            style=style or None,
+            html_only=args.html_only,
+        )
+        return 0
+
+    # `serve` is the only other command without a workdir.
     if args.command == "serve":
         from resume_tailor.web.app import create_app
         app = create_app()

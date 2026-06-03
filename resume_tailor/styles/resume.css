@@ -9,11 +9,29 @@
  *   - System / web-safe fonts. No embedded icon fonts.
  *   - Plain bullets. No icons or emoji as list markers.
  *   - Adequate margins so PDF→text extraction doesn't smash content.
+ *
+ * Sizes and spacing live in CSS variables so they can be overridden per-run
+ * (see resume_tailor.build._style_to_css). To scale the whole thing down for
+ * a long resume, drop a `style.json` into your workdir or use the "Tune
+ * layout" view in the web UI.
  */
+
+:root {
+  --font-size: 10.5pt;
+  --line-height: 1.35;
+  --margin-top: 0.6in;
+  --margin-side: 0.7in;
+  --name-size: 20pt;
+  --section-size: 11pt;
+  --subsection-size: 10.5pt;
+  --bullet-spacing: 0.025in;
+  --section-spacing: 0.18in;
+  --subsection-spacing: 0.1in;
+}
 
 @page {
   size: Letter;
-  margin: 0.6in 0.7in;
+  margin: var(--margin-top) var(--margin-side);
 }
 
 * {
@@ -27,14 +45,14 @@ html, body {
 
 body {
   font-family: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
-  font-size: 10.5pt;
-  line-height: 1.35;
+  font-size: var(--font-size);
+  line-height: var(--line-height);
   color: #1a1a1a;
 }
 
 /* --- Name (top h1) --- */
 h1 {
-  font-size: 20pt;
+  font-size: var(--name-size);
   font-weight: 700;
   margin: 0 0 0.05in 0;
   letter-spacing: 0.3px;
@@ -42,20 +60,20 @@ h1 {
 
 /* --- Section headings (Experience, Education, ...) --- */
 h2 {
-  font-size: 11pt;
+  font-size: var(--section-size);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  margin: 0.18in 0 0.05in 0;
+  margin: var(--section-spacing) 0 0.05in 0;
   padding-bottom: 2pt;
   border-bottom: 0.5pt solid #1a1a1a;
 }
 
 /* --- Job titles / subsection headings --- */
 h3 {
-  font-size: 10.5pt;
+  font-size: var(--subsection-size);
   font-weight: 700;
-  margin: 0.1in 0 0.02in 0;
+  margin: var(--subsection-spacing) 0 0.02in 0;
 }
 
 /* --- Inline emphasis --- */
@@ -72,7 +90,7 @@ p {
 h1 + p {
   margin-bottom: 0.12in;
   color: #333;
-  font-size: 10pt;
+  font-size: calc(var(--font-size) - 0.5pt);
 }
 
 /* --- Lists --- */
@@ -82,7 +100,7 @@ ul, ol {
 }
 
 li {
-  margin-bottom: 0.025in;
+  margin-bottom: var(--bullet-spacing);
   page-break-inside: avoid;
 }
 
@@ -112,5 +130,5 @@ h2, h3 {
 /* --- Code (rare in resumes, but render it sensibly if present) --- */
 code {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 9.5pt;
+  font-size: calc(var(--font-size) - 1pt);
 }

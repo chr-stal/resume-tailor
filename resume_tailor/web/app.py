@@ -26,7 +26,12 @@ from flask import (
 )
 
 from resume_tailor.apply import run_apply
-from resume_tailor.build import run_build
+from resume_tailor.build import (
+    DEFAULT_STYLE,
+    PRESETS,
+    load_style,
+    run_build,
+)
 from resume_tailor.review import run_review
 from resume_tailor.state import (
     Workdir,
@@ -136,6 +141,35 @@ def create_app() -> Flask:
         write_text_atomic(wd.job_txt, jd.rstrip() + "\n")
         flash(f"Created run '{name}'.", "success")
         return redirect(url_for("run_view", name=name))
+
+    @app.route("/runs/markdown", methods=["POST"])
+    def create_markdown_run():
+        """Create a run with just hand-written Markdown — no Claude review.
+
+        We write the same text into both ``input/resume.md`` (so the workdir is
+        well-formed) and ``03-final.md`` (so the build step has something to
+        render immediately). The user lands on the Markdown editor and can
+        tune/rebuild from there.
+        """
+        name = (request.form.get("name") or "").strip().lower()
+        markdown = request.form.get("markdown") or ""
+        if not SLUG_RE.match(name):
+            flash("Run name must be lowercase letters, numbers, hyphens, or underscores.", "error")
+            return redirect(url_for("index"))
+        if not markdown.strip():
+            flash("Markdown content is required.", "error")
+            return redirect(url_for("index"))
+        run_dir = RUNS_ROOT / name
+        if run_dir.exists():
+            flash(f"Run '{name}' already exists.", "error")
+            return redirect(url_for("index"))
+
+        wd = open_workdir(run_dir)
+        text = markdown.rstrip() + "\n"
+        write_text_atomic(wd.resume_md, text)
+        write_text_atomic(wd.final_md, text)
+        flash(f"Created Markdown-only run '{name}'.", "success")
+        return redirect(url_for("markdown_view", name=name))
 
     @app.route("/runs/<name>")
     def run_view(name):
@@ -270,6 +304,51 @@ def create_app() -> Flask:
             name=name,
             content=content,
             source=source,
+            info=info,
+        )
+
+    @app.route("/runs/<name>/style", methods=["GET", "POST"])
+    def style_view(name):
+        wd = _wd_or_404(name)
+
+        if request.method == "POST":
+            new_style: dict = {}
+            errors: list[str] = []
+            for k in DEFAULT_STYLE:
+                raw = (request.form.get(k) or "").strip()
+                if not raw:
+                    continue
+                try:
+                    new_style[k] = float(raw)
+                except ValueError:
+                    errors.append(f"{k!r} must be a number (got {raw!r})")
+
+            if errors:
+                for e in errors:
+                    flash(e, "error")
+                return redirect(url_for("style_view", name=name))
+
+            write_json_atomic(wd.style_json, new_style)
+
+            if request.form.get("rebuild") == "1":
+                try:
+                    run_build(wd)
+                    flash("Saved style and rebuilt PDF.", "success")
+                except Exception as e:
+                    flash(f"Saved style but build failed: {e}", "error")
+            else:
+                flash("Saved style.", "success")
+            return redirect(url_for("style_view", name=name))
+
+        style = load_style(wd)
+        info = _run_info(wd.root)
+        return render_template(
+            "style.html",
+            name=name,
+            style=style,
+            defaults=DEFAULT_STYLE,
+            presets=PRESETS,
+            has_overrides=wd.style_json.exists(),
             info=info,
         )
 

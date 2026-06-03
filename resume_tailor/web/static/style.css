@@ -233,3 +233,30 @@ textarea {
 /* ---------- markdown editor ---------- */
 .md-form textarea { min-height: 65vh; }
 .md-form .actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+
+/* ---------- style (layout-tuning) editor ---------- */
+.preset-buttons { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.preset-buttons button { text-transform: capitalize; }
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem 1rem;
+}
+.style-field { display: flex; flex-direction: column; gap: 0.25rem; font-weight: 500; }
+.style-field > span:first-child { font-size: 0.9rem; }
+.style-field .input-row { display: flex; align-items: baseline; gap: 0.4rem; font-weight: 400; }
+.style-field input[type=number] {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+}
+.style-field .unit { color: var(--muted); font-size: 0.85rem; }
+.style-field small { font-weight: 400; }
+
+.style-form .actions {
+  display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;
+}

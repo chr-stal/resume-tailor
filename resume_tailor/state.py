@@ -57,6 +57,10 @@ class Workdir:
     def final_html(self) -> Path:
         return self.root / "04-resume.html"
 
+    @property
+    def style_json(self) -> Path:
+        return self.root / "style.json"
+
     def ensure(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.input_dir.mkdir(parents=True, exist_ok=True)

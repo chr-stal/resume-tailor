@@ -1,8 +1,8 @@
 # resume-tailor
 
-A small CLI that tailors your resume to a specific job description, using Claude
-for the suggestions and a clean Markdown → HTML → PDF pipeline for the final
-ATS-friendly output.
+A small CLI **and local web app** that tailors your resume to a specific job
+description, using Claude for the suggestions and a clean Markdown → HTML → PDF
+pipeline for the final ATS-friendly output.
 
 The pipeline is intentionally split into four independent stages, each writing
 its output to a JSON or text file in a per-job *workdir*. Any stage can be
@@ -60,7 +60,32 @@ cp .env.example .env
 # put your Anthropic API key in .env
 ```
 
-## Usage
+## Usage — web UI (recommended)
+
+```bash
+python -m resume_tailor serve
+# open http://127.0.0.1:8000
+```
+
+From the browser you can:
+
+- create a new run by pasting your resume Markdown and the job description,
+- run review with one click and watch suggestions populate,
+- approve / deny / edit each suggestion as a card — every click autosaves
+  to `02-decisions.json`, so you can close the tab any time,
+- apply decisions, hand-edit the final Markdown in the in-browser editor,
+- rebuild and preview the ATS-friendly PDF inline.
+
+Each run lives in `runs/<your-run-name>/` on disk — same files, same
+fault-tolerance story as the CLI (see *Recovery scenarios* below).
+
+Custom host or port:
+
+```bash
+python -m resume_tailor serve --host 0.0.0.0 --port 9000
+```
+
+## Usage — CLI
 
 ```bash
 # 1) Convert your resume to Markdown (or write it from scratch).
@@ -79,6 +104,32 @@ python -m resume_tailor run --resume my_resume.md --jd job.txt --workdir runs/ac
 ```
 
 The PDF lands at `runs/acme-pm/04-resume.pdf`.
+
+The CLI and the web UI write the same files in the same workdir layout, so
+you can mix and match — e.g. drive the early stages from the web UI, then
+hand-edit `03-final.md` and re-run `build` from the CLI.
+
+## Usage — one-shot Markdown → PDF (no Claude)
+
+When you've already written the Markdown you want — say, you're iterating on
+your base resume — and just want a PDF, skip the pipeline entirely:
+
+```bash
+python -m resume_tailor render --input my_resume.md --output my_resume.pdf
+
+# With a layout preset:
+python -m resume_tailor render --input my_resume.md --output my_resume.pdf --preset compact
+
+# With a custom style file:
+python -m resume_tailor render --input my_resume.md --output my_resume.pdf --style style.json
+
+# Or skip PDF and write HTML for browser print-to-PDF:
+python -m resume_tailor render --input my_resume.md --output my_resume.html --html-only
+```
+
+In the web UI, the index page has a *Render Markdown to PDF (no Claude)* form
+right next to the LLM-driven creation form. That one lands you directly in
+the Markdown editor — no review, approve, or apply stage in the way.
 
 ## The workdir
 
@@ -107,6 +158,38 @@ no hidden state.
 | You decided Claude's suggestions weren't useful | Hand-write `03-final.md` (or copy `input/resume.md`) and run `build`. |
 | PDF rendered ugly | Edit `03-final.md` or `resume_tailor/styles/resume.css`, run `build`. |
 
+## Tuning the layout for a long resume
+
+When your resume runs to two pages and you want to squeeze it to one, you can
+tune body font size, line height, page margins, heading sizes, and bullet
+spacing — without touching the stylesheet itself.
+
+In the web UI, click **Tune layout** on the Build card. The form has one-click
+presets (`default` / `compact` / `ultra-compact`) plus a number input for each
+individual lever. Hit *Save & rebuild PDF* and reload the PDF preview.
+
+From the CLI, drop a `style.json` into the run's workdir:
+
+```json
+{
+  "font_size_pt": 10.0,
+  "line_height": 1.3,
+  "page_margin_top_in": 0.5,
+  "page_margin_side_in": 0.6
+}
+```
+
+Any keys you omit fall back to defaults. Then re-run `build`:
+
+```bash
+python -m resume_tailor build --workdir runs/acme-pm
+```
+
+Under the hood the stylesheet exposes everything as CSS variables
+(`--font-size`, `--margin-top`, `--margin-side`, `--name-size`,
+`--section-size`, etc.), and the build step prepends a `:root { ... }` block
+built from `style.json` so it wins over the defaults.
+
 ## Fallback PDF rendering
 
 If WeasyPrint won't install, run `build --html-only` to get a printable HTML
@@ -118,7 +201,7 @@ Save as PDF*. The CSS is the same, so it still comes out ATS-friendly.
 ```
 resume_tailor/
   __main__.py     # `python -m resume_tailor`
-  cli.py          # argparse + subcommands
+  cli.py          # argparse + subcommands (review/approve/apply/build/run/serve)
   state.py        # workdir paths, atomic JSON read/write
   review.py       # calls Claude API, writes 01-suggestions.json
   approve.py      # interactive prompt, writes 02-decisions.json
@@ -126,6 +209,10 @@ resume_tailor/
   build.py        # markdown → HTML → PDF
   styles/
     resume.css    # ATS-friendly stylesheet
+  web/
+    app.py        # Flask app: thin wrapper over the pipeline functions
+    templates/    # base, index, run dashboard, approve cards, markdown editor
+    static/       # style.css + autosave JS for the approval view
 examples/
   resume.md       # sample resume
   job.txt         # sample job description
