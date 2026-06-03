@@ -1,5 +1,93 @@
+// =============================================================================
+// Index page: client-side search / filter / sort over the run-card grid.
+// =============================================================================
+(function () {
+  const grid = document.getElementById("run-grid");
+  if (!grid) return;
+
+  const searchInput = document.getElementById("run-search");
+  const sortSelect = document.getElementById("run-sort");
+  const chips = document.querySelectorAll(".filter-chips .chip");
+  const emptyMsg = document.getElementById("empty-search");
+
+  // Persist user choices across reloads so coming back to the page keeps your
+  // filter/sort state. localStorage on a same-origin local app is fine here.
+  const STORAGE_KEY = "resumeTailor.indexState";
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch { return {}; }
+  })();
+  let activeFilter = saved.filter || "all";
+  let activeSort = saved.sort || "recent";
+  if (saved.search && searchInput) searchInput.value = saved.search;
+  if (sortSelect) sortSelect.value = activeSort;
+  chips.forEach((c) => c.classList.toggle("active", c.dataset.filter === activeFilter));
+
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        filter: activeFilter,
+        sort: activeSort,
+        search: searchInput ? searchInput.value : "",
+      }));
+    } catch { /* ignore quota errors */ }
+  }
+
+  function applyFilterAndSearch() {
+    const q = (searchInput?.value || "").trim().toLowerCase();
+    let visible = 0;
+    grid.querySelectorAll(".run-card").forEach((card) => {
+      const matchesFilter =
+        activeFilter === "all" ||
+        (activeFilter === "in_progress" && card.classList.contains("is-in-progress")) ||
+        (activeFilter === "done"        && card.classList.contains("is-done")) ||
+        (activeFilter === "markdown"    && card.classList.contains("is-markdown"));
+      const haystack = (card.dataset.name + " " + card.dataset.title).toLowerCase();
+      const matchesQuery = !q || haystack.includes(q);
+      const show = matchesFilter && matchesQuery;
+      card.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+    if (emptyMsg) emptyMsg.hidden = visible > 0 || grid.children.length === 0;
+  }
+
+  function applySort() {
+    const cards = Array.from(grid.querySelectorAll(".run-card"));
+    const compare = {
+      recent: (a, b) => parseFloat(b.dataset.mtime) - parseFloat(a.dataset.mtime),
+      name:   (a, b) => a.dataset.name.localeCompare(b.dataset.name),
+      status: (a, b) => a.dataset.status.localeCompare(b.dataset.status),
+    }[activeSort] || (() => 0);
+    cards.sort(compare).forEach((c) => grid.appendChild(c));
+  }
+
+  searchInput?.addEventListener("input", () => { applyFilterAndSearch(); persist(); });
+  sortSelect?.addEventListener("change", () => {
+    activeSort = sortSelect.value;
+    applySort();
+    persist();
+  });
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      chips.forEach((c) => {
+        c.classList.toggle("active", c === chip);
+        c.setAttribute("aria-selected", c === chip ? "true" : "false");
+      });
+      activeFilter = chip.dataset.filter;
+      applyFilterAndSearch();
+      persist();
+    });
+  });
+
+  // Initial paint reflects restored state.
+  applySort();
+  applyFilterAndSearch();
+})();
+
+// =============================================================================
 // Per-decision autosave for the approve view.
 // One AJAX POST per click; the surrounding card updates on success.
+// =============================================================================
 
 (function () {
   const list = document.querySelector(".suggestions");

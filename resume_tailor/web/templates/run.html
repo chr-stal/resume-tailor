@@ -54,32 +54,44 @@
   <article class="stage {{ 'done' if info.has_final_md else '' }}">
     <header><span class="num">4</span><h3>Apply &amp; edit</h3></header>
     <p class="muted">Patch the original resume with your decisions to produce <code>03-final.md</code>. You can also hand-edit it.</p>
-    <form method="post" action="{{ url_for('run_apply_route', name=name) }}" class="inline">
-      <button type="submit">Apply decisions</button>
-    </form>
-    <p>
+
+    <div class="stage-actions">
+      <form method="post" action="{{ url_for('run_apply_route', name=name) }}" class="inline">
+        <button type="submit">Apply decisions</button>
+      </form>
       <a href="{{ url_for('markdown_view', name=name) }}" class="btn secondary">Open editor</a>
-    </p>
+    </div>
   </article>
 
   <article class="stage {{ 'done' if info.has_pdf or info.has_html else '' }}">
     <header><span class="num">5</span><h3>Build</h3></header>
     <p class="muted">Render <code>03-final.md</code> to an ATS-friendly PDF.</p>
-    <form method="post" action="{{ url_for('run_build_route', name=name) }}" class="inline">
-      <button type="submit">Build PDF</button>
+
+    <form method="post" action="{{ url_for('rebuild_and_open', name=name) }}" class="filename-form">
+      <label class="filename-label">
+        <span>Download filename</span>
+        <input type="text" name="pdf_filename"
+               value="{{ meta.pdf_filename }}"
+               placeholder="{{ name }}-resume.pdf"
+               pattern="[A-Za-z0-9._\- ]+">
+      </label>
+      <button type="submit" formtarget="_blank">Save &amp; rebuild → open PDF</button>
     </form>
-    <form method="post" action="{{ url_for('run_build_route', name=name) }}" class="inline">
-      <input type="hidden" name="html_only" value="1">
-      <button type="submit" class="secondary">Build HTML only</button>
-    </form>
-    <p>
+
+    <div class="stage-actions">
+      <form method="post" action="{{ url_for('run_build_route', name=name) }}" class="inline">
+        <button type="submit" class="secondary">Just rebuild</button>
+      </form>
       {% if info.has_pdf or info.has_html %}
-      <a href="{{ url_for('pdf_view', name=name) }}" target="_blank" class="btn">
+      <a href="{{ url_for('pdf_view', name=name) }}" target="_blank" class="btn secondary">
         Open {{ 'PDF' if info.has_pdf else 'HTML' }}
+      </a>
+      <a href="{{ url_for('pdf_view', name=name, download=1) }}" class="btn secondary">
+        ⬇ Download
       </a>
       {% endif %}
       <a href="{{ url_for('style_view', name=name) }}" class="btn secondary">Tune layout</a>
-    </p>
+    </div>
   </article>
 
 </section>

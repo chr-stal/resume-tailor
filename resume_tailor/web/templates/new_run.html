@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}New run · resume-tailor{% endblock %}
+{% block content %}
+
+<nav class="breadcrumbs">
+  <a href="{{ url_for('index') }}">all runs</a> · <strong>new run (with Claude)</strong>
+</nav>
+
+<section class="panel">
+  <h2>Tailor for a job (with Claude)</h2>
+  <p class="muted">Paste your resume and a job description. Claude proposes targeted edits; you approve them; the result is rendered to PDF.</p>
+  <form method="post" action="{{ url_for('create_run') }}" class="form-create">
+    <label>
+      <span>Run name</span>
+      <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
+             placeholder="acme-pm-2026-05" autocomplete="off" autofocus>
+      <small class="muted">lowercase letters, numbers, hyphens, underscores</small>
+    </label>
+
+    <label>
+      <span>Resume (Markdown)</span>
+      <textarea name="resume" rows="14" required
+                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
+    </label>
+
+    <label>
+      <span>Job description (plain text)</span>
+      <textarea name="jd" rows="14" required
+                placeholder="Paste the JD here…"></textarea>
+    </label>
+
+    <div class="form-actions">
+      <a href="{{ url_for('index') }}" class="btn secondary">Cancel</a>
+      <button type="submit">Create run</button>
+    </div>
+  </form>
+</section>
+
+{% endblock %}

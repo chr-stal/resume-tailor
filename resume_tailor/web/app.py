@@ -95,6 +95,114 @@ def create_app() -> Flask:
             "has_html": wd.final_html.exists(),
         }
 
+    def _run_card(p: Path) -> dict:
+        """Richer per-run summary for the index card grid.
+
+        Pulls a human-readable title from the JD, computes a single 'status'
+        string the card can render, and surfaces counts the user actually
+        cares about at-a-glance.
+        """
+        wd = open_workdir(p)
+        info = _run_info(p)
+
+        # Title: first non-empty, non-boilerplate line of the JD, capped.
+        title = ""
+        if wd.job_txt.exists():
+            for raw in read_text(wd.job_txt).splitlines():
+                line = raw.strip().lstrip("#").strip()
+                if not line:
+                    continue
+                if line.lower() in {"job description", "jd", "role"}:
+                    continue
+                title = line
+                break
+        title = (title[:80] + "…") if len(title) > 80 else title
+
+        # Counts.
+        suggestion_count = 0
+        if wd.suggestions_json.exists():
+            try:
+                suggestion_count = len(read_json(wd.suggestions_json).get("suggestions", []))
+            except Exception:
+                suggestion_count = 0
+
+        decisions_total = 0
+        approved = denied = edited = 0
+        if wd.decisions_json.exists():
+            try:
+                decisions = read_json(wd.decisions_json).get("decisions", [])
+                decisions_total = len(decisions)
+                for d in decisions:
+                    a = d.get("action")
+                    if a == "approve": approved += 1
+                    elif a == "deny": denied += 1
+                    elif a == "edit": edited += 1
+            except Exception:
+                pass
+
+        # Status — single short label.
+        is_markdown_only = (
+            info["has_final_md"] and not info["has_suggestions"]
+        )
+        if info["has_pdf"]:
+            status, status_class = "done", "done"
+        elif info["has_final_md"]:
+            status, status_class = "ready to build", "ready-build"
+        elif not info["has_suggestions"]:
+            if is_markdown_only:
+                status, status_class = "markdown only", "markdown"
+            else:
+                status, status_class = "needs review", "needs-review"
+        elif decisions_total == 0:
+            status, status_class = "needs approval", "needs-approval"
+        elif decisions_total < suggestion_count:
+            status, status_class = f"approving {decisions_total}/{suggestion_count}", "approving"
+        else:
+            status, status_class = "ready to apply", "ready-apply"
+
+        # "Last touched" — newest mtime in the workdir, formatted relatively.
+        latest = p.stat().st_mtime
+        for child in p.rglob("*"):
+            try:
+                latest = max(latest, child.stat().st_mtime)
+            except OSError:
+                pass
+
+        return {
+            **info,
+            "title": title or "(no job description)",
+            "suggestion_count": suggestion_count,
+            "decisions_total": decisions_total,
+            "approved": approved,
+            "denied": denied,
+            "edited": edited,
+            "status": status,
+            "status_class": status_class,
+            "is_done": status_class == "done",
+            "is_in_progress": status_class not in ("done", "markdown"),
+            "is_markdown_only": is_markdown_only,
+            "mtime": latest,
+            "mtime_label": _relative_time(latest),
+        }
+
+    def _relative_time(ts: float) -> str:
+        import time
+        delta = time.time() - ts
+        if delta < 60:
+            return "just now"
+        if delta < 3600:
+            return f"{int(delta // 60)} min ago"
+        if delta < 86400:
+            return f"{int(delta // 3600)} hr ago"
+        days = int(delta // 86400)
+        if days == 1:
+            return "yesterday"
+        if days < 30:
+            return f"{days} days ago"
+        if days < 365:
+            return f"{days // 30} mo ago"
+        return f"{days // 365} yr ago"
+
     def _decision_summary(decisions_by_id: dict) -> dict:
         return {
             "approved": sum(1 for d in decisions_by_id.values() if d.get("action") == "approve"),
@@ -108,6 +216,39 @@ def create_app() -> Flask:
             return {}
         return {d["id"]: d for d in read_json(wd.decisions_json).get("decisions", [])}
 
+    def _load_meta(wd: Workdir) -> dict:
+        """Per-run metadata (currently just the PDF download filename).
+
+        Missing keys fall back to defaults computed from the run name, so a run
+        without a meta.json behaves identically to one with the defaults
+        written out.
+        """
+        meta = {"pdf_filename": f"{wd.root.name}-resume.pdf"}
+        if wd.meta_json.exists():
+            try:
+                stored = read_json(wd.meta_json) or {}
+                if isinstance(stored, dict):
+                    for k, v in stored.items():
+                        if isinstance(v, str) and v.strip():
+                            meta[k] = v.strip()
+            except Exception:
+                pass
+        return meta
+
+    def _safe_pdf_filename(raw: str, default: str) -> str:
+        """Sanitize a user-supplied filename. Strips path components, enforces .pdf."""
+        import os.path
+        name = os.path.basename(raw or "").strip()
+        if not name:
+            return default
+        # Replace anything outside a conservative allowlist with '-'.
+        cleaned = "".join(c if c.isalnum() or c in "._- " else "-" for c in name).strip(" .-_")
+        if not cleaned:
+            return default
+        if not cleaned.lower().endswith(".pdf"):
+            cleaned += ".pdf"
+        return cleaned[:120]
+
     def _save_decisions(wd: Workdir, decisions_by_id: dict, order: list[str]) -> None:
         payload = {"decisions": [decisions_by_id[i] for i in order if i in decisions_by_id]}
         write_json_atomic(wd.decisions_json, payload)
@@ -118,8 +259,28 @@ def create_app() -> Flask:
         runs = []
         for p in sorted(RUNS_ROOT.iterdir()) if RUNS_ROOT.exists() else []:
             if p.is_dir() and not p.name.startswith("."):
-                runs.append(_run_info(p))
-        return render_template("index.html", runs=runs)
+                runs.append(_run_card(p))
+
+        # Default sort: most recently touched first.
+        runs.sort(key=lambda r: r["mtime"], reverse=True)
+
+        counts = {
+            "all":         len(runs),
+            "in_progress": sum(1 for r in runs if r["is_in_progress"]),
+            "done":        sum(1 for r in runs if r["is_done"]),
+            "markdown":    sum(1 for r in runs if r["is_markdown_only"]),
+        }
+        return render_template("index.html", runs=runs, counts=counts)
+
+    @app.route("/runs/new")
+    def new_run_form():
+        """Standalone page for the LLM-driven create flow."""
+        return render_template("new_run.html")
+
+    @app.route("/runs/new-markdown")
+    def new_markdown_form():
+        """Standalone page for the Markdown-only create flow."""
+        return render_template("new_markdown.html")
 
     @app.route("/runs", methods=["POST"])
     def create_run():
@@ -182,12 +343,14 @@ def create_app() -> Flask:
         if wd.decisions_json.exists():
             decisions_by_id = _load_decisions_by_id(wd)
             decision_summary = _decision_summary(decisions_by_id)
+        meta = _load_meta(wd)
         return render_template(
             "run.html",
             name=name,
             info=info,
             suggestion_count=suggestion_count,
             decision_summary=decision_summary,
+            meta=meta,
         )
 
     @app.route("/runs/<name>/review", methods=["POST"])
@@ -204,11 +367,15 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/apply", methods=["POST"])
     def run_apply_route(name):
         wd = _wd_or_404(name)
+        nxt = request.args.get("next") or request.form.get("next")
         try:
             run_apply(wd)
             flash("Applied decisions.", "success")
         except Exception as e:
             flash(f"Apply failed: {e}", "error")
+            return redirect(url_for("run_view", name=name))
+        if nxt == "editor":
+            return redirect(url_for("markdown_view", name=name))
         return redirect(url_for("run_view", name=name))
 
     @app.route("/runs/<name>/build", methods=["POST"])
@@ -279,14 +446,24 @@ def create_app() -> Flask:
         if request.method == "POST":
             text = request.form.get("content") or ""
             write_text_atomic(wd.final_md, text)
+
+            # Optional filename update piggybacked on the same POST.
+            raw_fn = (request.form.get("pdf_filename") or "").strip()
+            if raw_fn:
+                meta_now = _load_meta(wd)
+                default = f"{wd.root.name}-resume.pdf"
+                meta_now["pdf_filename"] = _safe_pdf_filename(raw_fn, default)
+                write_json_atomic(wd.meta_json, meta_now)
+
             if request.form.get("rebuild") == "1":
                 try:
                     run_build(wd)
-                    flash("Saved and rebuilt PDF.", "success")
                 except Exception as e:
                     flash(f"Saved markdown but build failed: {e}", "error")
-            else:
-                flash("Saved.", "success")
+                    return redirect(url_for("markdown_view", name=name))
+                # Send the (typically _blank-targeted) tab straight to the PDF.
+                return redirect(url_for("pdf_view", name=name))
+            flash("Saved.", "success")
             return redirect(url_for("markdown_view", name=name))
 
         if wd.final_md.exists():
@@ -299,12 +476,14 @@ def create_app() -> Flask:
             content = ""
             source = "(empty)"
         info = _run_info(wd.root)
+        meta = _load_meta(wd)
         return render_template(
             "markdown.html",
             name=name,
             content=content,
             source=source,
             info=info,
+            meta=meta,
         )
 
     @app.route("/runs/<name>/style", methods=["GET", "POST"])
@@ -355,11 +534,59 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/pdf")
     def pdf_view(name):
         wd = _wd_or_404(name)
+        download = request.args.get("download") == "1"
+        meta = _load_meta(wd)
+        filename = meta["pdf_filename"]
+
         if wd.final_pdf.exists():
-            return send_file(wd.final_pdf, mimetype="application/pdf")
+            return send_file(
+                wd.final_pdf,
+                mimetype="application/pdf",
+                as_attachment=download,
+                download_name=filename if download else None,
+            )
         if wd.final_html.exists():
-            return send_file(wd.final_html, mimetype="text/html")
+            # Match the chosen filename's stem for HTML downloads.
+            html_name = filename.rsplit(".", 1)[0] + ".html"
+            return send_file(
+                wd.final_html,
+                mimetype="text/html",
+                as_attachment=download,
+                download_name=html_name if download else None,
+            )
         abort(404)
+
+    @app.route("/runs/<name>/meta", methods=["POST"])
+    def update_meta(name):
+        wd = _wd_or_404(name)
+        meta = _load_meta(wd)
+        raw = request.form.get("pdf_filename", "")
+        default = f"{wd.root.name}-resume.pdf"
+        meta["pdf_filename"] = _safe_pdf_filename(raw, default)
+        write_json_atomic(wd.meta_json, meta)
+        flash(f"Filename set to '{meta['pdf_filename']}'.", "success")
+        return redirect(request.referrer or url_for("run_view", name=name))
+
+    @app.route("/runs/<name>/rebuild", methods=["POST"])
+    def rebuild_and_open(name):
+        """Optionally update the PDF filename, run the build, then redirect to
+        the PDF view. Designed to be POSTed with formtarget="_blank" so the
+        PDF opens in a new tab while the caller stays where it was."""
+        wd = _wd_or_404(name)
+
+        raw = (request.form.get("pdf_filename") or "").strip()
+        if raw:
+            meta = _load_meta(wd)
+            default = f"{wd.root.name}-resume.pdf"
+            meta["pdf_filename"] = _safe_pdf_filename(raw, default)
+            write_json_atomic(wd.meta_json, meta)
+
+        try:
+            run_build(wd)
+        except Exception as e:
+            flash(f"Build failed: {e}", "error")
+            return redirect(url_for("run_view", name=name))
+        return redirect(url_for("pdf_view", name=name))
 
     @app.route("/runs/<name>/input/resume.md")
     def view_input_resume(name):

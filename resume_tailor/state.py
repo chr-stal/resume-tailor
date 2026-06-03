@@ -61,6 +61,10 @@ class Workdir:
     def style_json(self) -> Path:
         return self.root / "style.json"
 
+    @property
+    def meta_json(self) -> Path:
+        return self.root / "meta.json"
+
     def ensure(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.input_dir.mkdir(parents=True, exist_ok=True)

@@ -64,8 +64,11 @@
   {% endfor %}
 </ol>
 
-<p class="actions-bottom">
+<div class="actions-bottom">
   <a href="{{ url_for('run_view', name=name) }}" class="btn secondary">← Back to dashboard</a>
-</p>
+  <form method="post" action="{{ url_for('run_apply_route', name=name) }}?next=editor" class="inline">
+    <button type="submit">Apply &amp; open editor →</button>
+  </form>
+</div>
 
 {% endblock %}

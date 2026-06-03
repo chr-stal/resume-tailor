@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}New Markdown-only run · resume-tailor{% endblock %}
+{% block content %}
+
+<nav class="breadcrumbs">
+  <a href="{{ url_for('index') }}">all runs</a> · <strong>new run (Markdown only)</strong>
+</nav>
+
+<section class="panel">
+  <h2>Render Markdown to PDF (no Claude)</h2>
+  <p class="muted">Skip the review pipeline — write or paste a complete Markdown resume and go straight to the editor + PDF preview.</p>
+  <form method="post" action="{{ url_for('create_markdown_run') }}" class="form-create">
+    <label>
+      <span>Run name</span>
+      <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
+             placeholder="base-resume" autocomplete="off" autofocus>
+    </label>
+
+    <label>
+      <span>Resume (Markdown)</span>
+      <textarea name="markdown" rows="18" required
+                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
+    </label>
+
+    <div class="form-actions">
+      <a href="{{ url_for('index') }}" class="btn secondary">Cancel</a>
+      <button type="submit">Create Markdown-only run</button>
+    </div>
+  </form>
+</section>
+
+{% endblock %}

@@ -1,73 +1,81 @@
 {% extends "base.html" %}
 {% block content %}
 
-<section class="panel">
-  <h2>Runs</h2>
-  {% if runs %}
-  <ul class="run-list">
-    {% for r in runs %}
-    <li>
-      <a href="{{ url_for('run_view', name=r.name) }}" class="run-name">{{ r.name }}</a>
-      <span class="status-dots">
-        <span class="dot {{ 'on' if r.has_input        else 'off' }}" title="input ready">input</span>
-        <span class="dot {{ 'on' if r.has_suggestions  else 'off' }}" title="review ran">review</span>
-        <span class="dot {{ 'on' if r.has_decisions    else 'off' }}" title="decisions saved">decisions</span>
-        <span class="dot {{ 'on' if r.has_final_md     else 'off' }}" title="final markdown built">final.md</span>
-        <span class="dot {{ 'on' if r.has_pdf          else 'off' }}" title="PDF rendered">pdf</span>
-      </span>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="muted">No runs yet — create one below.</p>
-  {% endif %}
+<section class="hero">
+  <div class="hero-text">
+    <h2>Your runs</h2>
+    <p class="muted">One workdir per application. Pick up where you left off, or start a new one.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('new_run_form') }}" class="btn">+ Tailor for a job</a>
+    <a href="{{ url_for('new_markdown_form') }}" class="btn secondary">+ Markdown only</a>
+  </div>
 </section>
 
-<section class="panel">
-  <h2>Tailor for a job (with Claude)</h2>
-  <p class="muted">Paste your resume and a job description. Claude proposes targeted edits; you approve them; the result is rendered to PDF.</p>
-  <form method="post" action="{{ url_for('create_run') }}" class="form-create">
-    <label>
-      <span>Run name</span>
-      <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
-             placeholder="acme-pm-2026-05" autocomplete="off">
-      <small class="muted">lowercase letters, numbers, hyphens, underscores</small>
-    </label>
-
-    <label>
-      <span>Resume (Markdown)</span>
-      <textarea name="resume" rows="14" required
-                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
-    </label>
-
-    <label>
-      <span>Job description (plain text)</span>
-      <textarea name="jd" rows="14" required
-                placeholder="Paste the JD here…"></textarea>
-    </label>
-
-    <button type="submit">Create run</button>
-  </form>
+{% if runs %}
+<section class="runs-toolbar">
+  <input id="run-search" type="search" placeholder="Search by run name or role…" autocomplete="off">
+  <div class="filter-chips" role="tablist" aria-label="Filter runs">
+    <button class="chip active" data-filter="all"         aria-selected="true">All <span class="count">{{ counts.all }}</span></button>
+    <button class="chip"        data-filter="in_progress" aria-selected="false">In progress <span class="count">{{ counts.in_progress }}</span></button>
+    <button class="chip"        data-filter="done"        aria-selected="false">Done <span class="count">{{ counts.done }}</span></button>
+    {% if counts.markdown %}
+    <button class="chip"        data-filter="markdown"    aria-selected="false">Markdown <span class="count">{{ counts.markdown }}</span></button>
+    {% endif %}
+  </div>
+  <label class="sort-control">
+    Sort:
+    <select id="run-sort">
+      <option value="recent">Recent</option>
+      <option value="name">Name</option>
+      <option value="status">Status</option>
+    </select>
+  </label>
 </section>
 
-<section class="panel">
-  <h2>Render Markdown to PDF (no Claude)</h2>
-  <p class="muted">Skip the review pipeline — write or paste a complete Markdown resume and go straight to the editor + PDF preview. Useful for iterating on your base resume or for one-offs where you don't want Claude's suggestions.</p>
-  <form method="post" action="{{ url_for('create_markdown_run') }}" class="form-create">
-    <label>
-      <span>Run name</span>
-      <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
-             placeholder="base-resume" autocomplete="off">
-    </label>
+<ul class="run-grid" id="run-grid">
+  {% for r in runs %}
+  <li class="run-card
+    {% if r.is_done %}is-done{% endif %}
+    {% if r.is_in_progress %}is-in-progress{% endif %}
+    {% if r.is_markdown_only %}is-markdown{% endif %}"
+    data-name="{{ r.name }}"
+    data-title="{{ r.title|lower }}"
+    data-status="{{ r.status_class }}"
+    data-mtime="{{ r.mtime }}">
+    <a href="{{ url_for('run_view', name=r.name) }}" class="run-card-link">
+      <header>
+        <h3>{{ r.name }}</h3>
+        <span class="status-pill status-{{ r.status_class }}">{{ r.status }}</span>
+      </header>
+      <p class="role">{{ r.title }}</p>
+      <footer>
+        <span class="muted">{{ r.mtime_label }}</span>
+        {% if r.suggestion_count %}
+        <span class="muted">·</span>
+        <span class="muted">
+          {% if r.decisions_total %}
+            {{ r.decisions_total }}/{{ r.suggestion_count }} decided
+          {% else %}
+            {{ r.suggestion_count }} suggestion{{ '' if r.suggestion_count == 1 else 's' }}
+          {% endif %}
+        </span>
+        {% endif %}
+      </footer>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
 
-    <label>
-      <span>Resume (Markdown)</span>
-      <textarea name="markdown" rows="14" required
-                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
-    </label>
+<p id="empty-search" class="empty-state" hidden>
+  No runs match. Try a different search term, or clear the filter.
+</p>
 
-    <button type="submit">Create Markdown-only run</button>
-  </form>
+{% else %}
+<section class="empty-state-panel">
+  <h3>No runs yet</h3>
+  <p class="muted">Create your first one below.</p>
 </section>
+{% endif %}
 
 {% endblock %}
