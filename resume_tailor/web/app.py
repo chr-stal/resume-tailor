@@ -205,6 +205,18 @@ def create_app() -> Flask:
     def _inject_demo_flag():
         return {"demo_mode": app.config.get("DEMO_MODE", False)}
 
+    @app.after_request
+    def _no_index_header(response):
+        # Belt-and-suspenders alongside the <meta name="robots"> in base.html.
+        # Search engines respect either, but combining them removes any
+        # ambiguity for crawlers that ignore HTML-level hints.
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
+        return response
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        return ("User-agent: *\nDisallow: /\n", 200, {"Content-Type": "text/plain"})
+
     # ----- helpers -----
     def _wd_or_404(name: str) -> Workdir:
         if not SLUG_RE.match(name):
