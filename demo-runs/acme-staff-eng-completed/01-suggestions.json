@@ -1,0 +1,88 @@
+{
+  "model": "claude-sonnet-4-6",
+  "resume_path": "input/resume.md",
+  "job_path": "input/job.txt",
+  "suggestions": [
+    {
+      "id": "s1",
+      "section": "Summary",
+      "type": "replace",
+      "original_text": "Backend engineer with 5 years of experience building distributed systems. Comfortable across the stack with a focus on Python, payments infrastructure, and developer tooling.",
+      "suggested_text": "Senior backend engineer with 5+ years of Python experience building high-throughput distributed systems. Track record of operating revenue-critical payment services on-call, partnering with risk and finance teams, and driving incremental migrations from legacy monoliths to focused services.",
+      "rationale": "Aligns the summary with the JD's explicit emphasis on Python, payments, on-call, and monolith decomposition while still being accurate to the existing experience.",
+      "priority": "high"
+    },
+    {
+      "id": "s2",
+      "section": "Experience > Northwind Cloud",
+      "type": "replace",
+      "original_text": "- Worked on the payments team building backend services.",
+      "suggested_text": "- Designed and shipped Python services on the payments team, including invoice-retry logic that recovered ~$2.4M/yr in transient declines.",
+      "rationale": "JD specifically asks for Python + billing/invoicing reliability. Quantifying the impact lifts the bullet to staff-level signal.",
+      "priority": "high"
+    },
+    {
+      "id": "s3",
+      "section": "Experience > Northwind Cloud",
+      "type": "replace",
+      "original_text": "- Improved the speed of a slow batch job.",
+      "suggested_text": "- Cut p95 latency on the nightly billing batch from 88m to 14m by parallelizing PostgreSQL reads and rewriting the hot loop in Go.",
+      "rationale": "Concrete numbers, mentions PostgreSQL (JD), and ties to billing — a much stronger 'dive deep' signal at staff level.",
+      "priority": "high"
+    },
+    {
+      "id": "s4",
+      "section": "Experience > Northwind Cloud",
+      "type": "insert",
+      "original_text": "",
+      "suggested_text": "- Carried primary on-call for the billing service; reduced page volume 38% by replacing raw error-rate alerts with SLO-based alerting in Datadog.",
+      "rationale": "JD requires on-call experience and lists Datadog. Inserting a bullet that captures both, anchored to a real responsibility area.",
+      "priority": "high"
+    },
+    {
+      "id": "s5",
+      "section": "Experience > BlueOrbit Systems",
+      "type": "replace",
+      "original_text": "- Built REST endpoints in Python for the public API.",
+      "suggested_text": "- Built and operated the rate-limited public API in Python (used by 200+ partner integrations), including JWT auth, request shaping, and Kafka-backed audit logging.",
+      "rationale": "Adds Kafka (in the JD tech stack) and quantifies reach. Still grounded in the original bullet's responsibility.",
+      "priority": "medium"
+    },
+    {
+      "id": "s6",
+      "section": "Experience > BlueOrbit Systems",
+      "type": "replace",
+      "original_text": "- Helped migrate a legacy monolith to a service-oriented architecture.",
+      "suggested_text": "- Led the cut-over of the user-billing module out of a legacy Django monolith into a focused Python service, with a feature-flagged dual-write phase to de-risk the migration.",
+      "rationale": "JD calls out 'incremental migrations from the legacy monolith.' Re-phrasing the bullet to mirror that exact concern and showing the de-risking pattern reads as senior.",
+      "priority": "high"
+    },
+    {
+      "id": "s7",
+      "section": "Experience > Quarry Labs",
+      "type": "delete",
+      "original_text": "- Contributed bug fixes to the company's open-source SDK.",
+      "suggested_text": "",
+      "rationale": "Internship bullet that doesn't move the needle for a Senior Staff JD. Trimming keeps the resume tight.",
+      "priority": "low"
+    },
+    {
+      "id": "s8",
+      "section": "Skills",
+      "type": "replace",
+      "original_text": "Python, Go, PostgreSQL, Kafka, Kubernetes, AWS (EC2, S3, RDS, Lambda), Terraform, Docker, Linux, Git.",
+      "suggested_text": "Python, Go, PostgreSQL, Kafka, Kubernetes, AWS (EC2, S3, RDS, Lambda, SQS), Terraform, Docker, Datadog, Linux, Git.",
+      "rationale": "Adds Datadog and SQS — both surface area the JD explicitly calls out (Datadog is in the tech stack; SQS pairs naturally with the event-driven note).",
+      "priority": "medium"
+    },
+    {
+      "id": "s9",
+      "section": "Projects > scratchpad-db",
+      "type": "replace",
+      "original_text": "A small key-value store I wrote in Go for fun. Implements a write-ahead log, basic compaction, and an HTTP API.",
+      "suggested_text": "A small key-value store I wrote in Go to learn storage internals. Implements a write-ahead log with crash recovery, size-tiered compaction, and an HTTP API. Useful here as an example of dive-deep work into the durability and recovery patterns relevant to a payments backend.",
+      "rationale": "Adds the words 'durability' and 'recovery' which map to the JD's reliability emphasis, without inventing any new project scope.",
+      "priority": "low"
+    }
+  ]
+}

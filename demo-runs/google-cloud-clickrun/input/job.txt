@@ -1,0 +1,21 @@
+Software Engineer III — Cloud Infrastructure
+Crescent Labs
+
+We're hiring a Software Engineer III for our Cloud Infrastructure team. You
+will work on the foundational primitives that other engineering teams build on
+— compute scheduling, multi-tenant networking, and storage abstractions.
+
+What you'll do:
+- Design and build core infrastructure services in Go and Python.
+- Improve the reliability of multi-tenant resource allocation under load.
+- Operate production services with strong observability and on-call practices.
+- Partner with security and SRE teams on incident response and post-mortems.
+
+What we look for:
+- 4+ years of backend or systems experience.
+- Strong fundamentals in distributed systems.
+- Experience operating production services, including on-call.
+- Comfort with Linux, Kubernetes, and infrastructure-as-code (Terraform).
+- Bonus: prior work on storage internals or networking.
+
+Tech: Go, Python, Kubernetes, Terraform, PostgreSQL, etcd, gRPC, Linux.

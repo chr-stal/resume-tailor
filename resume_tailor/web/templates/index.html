@@ -3,8 +3,13 @@
 
 <section class="hero">
   <div class="hero-text">
+    {% if demo_mode %}
+    <h2>Demo runs</h2>
+    <p class="muted">Three sample runs at different points in the pipeline, plus anything you create this session. Every action is interactive — edits live in your browser session and don't affect other visitors.</p>
+    {% else %}
     <h2>Your runs</h2>
     <p class="muted">One workdir per application. Pick up where you left off, or start a new one.</p>
+    {% endif %}
   </div>
   <div class="hero-actions">
     <a href="{{ url_for('new_run_form') }}" class="btn">+ Tailor for a job</a>
@@ -38,7 +43,8 @@
   <li class="run-card
     {% if r.is_done %}is-done{% endif %}
     {% if r.is_in_progress %}is-in-progress{% endif %}
-    {% if r.is_markdown_only %}is-markdown{% endif %}"
+    {% if r.is_markdown_only %}is-markdown{% endif %}
+    {% if r.is_session %}is-session{% endif %}"
     data-name="{{ r.name }}"
     data-title="{{ r.title|lower }}"
     data-status="{{ r.status_class }}"
@@ -46,6 +52,7 @@
     <a href="{{ url_for('run_view', name=r.name) }}" class="run-card-link">
       <header>
         <h3>{{ r.name }}</h3>
+        {% if r.is_session %}<span class="session-badge" title="Created this session — fully editable">your run</span>{% endif %}
         <span class="status-pill status-{{ r.status_class }}">{{ r.status }}</span>
       </header>
       <p class="role">{{ r.title }}</p>

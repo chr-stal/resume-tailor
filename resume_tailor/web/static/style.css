@@ -29,6 +29,19 @@ body {
   background: var(--bg);
 }
 
+/* ---------- demo banner ---------- */
+.demo-banner {
+  background: linear-gradient(90deg, #fffaf0, #fdf3e0);
+  border-bottom: 1px solid var(--warn);
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  color: var(--fg-2);
+  text-align: center;
+}
+.demo-banner strong { color: var(--warn); margin-right: 0.4rem; }
+.demo-banner a { color: var(--accent); font-weight: 500; }
+body.demo-mode .flash.info { background: #fff8ea; color: var(--warn); }
+
 /* ---------- chrome ---------- */
 header {
   border-bottom: 1px solid var(--border);
@@ -195,6 +208,25 @@ textarea {
 .run-card.is-done { border-left: 3px solid var(--good); }
 .run-card.is-in-progress { border-left: 3px solid var(--accent); }
 .run-card.is-markdown   { border-left: 3px solid var(--warn); }
+.run-card.is-session    { border: 1px dashed var(--accent); }
+.run-card.is-session.is-done,
+.run-card.is-session.is-in-progress,
+.run-card.is-session.is-markdown {
+  /* Session marker beats the status colored border on session-scoped cards. */
+  border-left: 1px dashed var(--accent);
+}
+
+.session-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bg-cool);
+  color: var(--accent);
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+}
 
 .run-card-link {
   display: block;

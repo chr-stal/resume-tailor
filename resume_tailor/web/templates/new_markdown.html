@@ -8,18 +8,25 @@
 
 <section class="panel">
   <h2>Render Markdown to PDF (no Claude)</h2>
-  <p class="muted">Skip the review pipeline — write or paste a complete Markdown resume and go straight to the editor + PDF preview.</p>
+  <p class="muted">
+    {% if demo_mode %}
+    The field is pre-filled with a sample resume. Edit it however you like — when you click <em>Create</em>, this becomes a fully editable session run. Everything is ephemeral to your browser session.
+    {% else %}
+    Skip the review pipeline — write or paste a complete Markdown resume and go straight to the editor + PDF preview.
+    {% endif %}
+  </p>
   <form method="post" action="{{ url_for('create_markdown_run') }}" class="form-create">
     <label>
       <span>Run name</span>
       <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
+             value="{{ defaults.name or '' }}"
              placeholder="base-resume" autocomplete="off" autofocus>
     </label>
 
     <label>
       <span>Resume (Markdown)</span>
       <textarea name="markdown" rows="18" required
-                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
+                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;...">{{ defaults.markdown or '' }}</textarea>
     </label>
 
     <div class="form-actions">

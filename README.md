@@ -190,6 +190,54 @@ Under the hood the stylesheet exposes everything as CSS variables
 `--section-size`, etc.), and the build step prepends a `:root { ... }` block
 built from `style.json` so it wins over the defaults.
 
+## Deploying a read-only demo
+
+The repo includes a `demo-runs/` directory with three pre-baked workdirs
+showing the tool at different points in the pipeline:
+
+- `acme-staff-eng-completed` — full state, all stages done.
+- `stripe-payments-in-progress` — suggestions exist, ~4/9 decisions made.
+- `google-cloud-clickrun` — resume + JD only. Clicking *Run review* in demo
+  mode copies a pre-staged suggestions file into place (no API call).
+
+In **demo mode**, all writes are no-ops except for that one "click-to-run"
+trick: creating new runs, saving decisions, editing markdown, rebuilding,
+and changing layout all show a friendly *"Demo mode — not persisted"* flash.
+The Anthropic API key isn't read, so the deploy is safe to put on a public URL.
+
+Enable demo mode via env var:
+
+```bash
+RESUME_TAILOR_DEMO=1 python -m resume_tailor serve
+```
+
+On first boot, the app seeds `runs/` from `demo-runs/` for any workdirs that
+aren't already there.
+
+### Deploying to Fly.io (recommended for free-tier demo)
+
+```bash
+brew install flyctl       # one-time
+flyctl auth login         # one-time
+flyctl launch --no-deploy # accept the bundled fly.toml when prompted
+flyctl deploy
+```
+
+The bundled `fly.toml` sets `auto_stop_machines = "stop"` and
+`auto_start_machines = true`, so the app sleeps when idle and wakes on
+traffic. Expected cost: ~$0 with light interview-grade traffic.
+
+### Deploying anywhere with Docker
+
+```bash
+docker build -t resume-tailor-demo .
+docker run -p 8080:8080 resume-tailor-demo
+# open http://localhost:8080
+```
+
+Render, Railway, and any other Docker-friendly host work the same — just
+ensure `RESUME_TAILOR_DEMO=1` is set.
+
 ## Fallback PDF rendering
 
 If WeasyPrint won't install, run `build --html-only` to get a printable HTML

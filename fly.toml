@@ -1,0 +1,33 @@
+# Fly.io deployment config for the read-only demo.
+#
+# Setup (one-time):
+#   flyctl auth login
+#   flyctl launch --no-deploy   # accept the existing fly.toml when prompted
+#
+# Deploy:
+#   flyctl deploy
+#
+# The app is configured to wake on traffic and sleep when idle so the demo
+# costs ~$0 on the free tier.
+
+app = "resume-tailor-demo"
+primary_region = "sea"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  RESUME_TAILOR_DEMO = "1"
+  RESUME_TAILOR_HOST = "0.0.0.0"
+  RESUME_TAILOR_PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

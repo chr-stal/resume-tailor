@@ -85,6 +85,37 @@
 })();
 
 // =============================================================================
+// Approve view: "Apply & open editor" button.
+// Drives the POST via fetch, then explicitly navigates to the editor. Using
+// fetch + manual nav side-steps any weirdness with browsers following the
+// 302 from a same-origin POST inside an embedded form.
+// =============================================================================
+(function () {
+  const form = document.getElementById("apply-and-open-form");
+  if (!form) return;
+  const editorUrl = form.dataset.editorUrl;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector("button[type=submit]");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Applying…";
+    }
+    try {
+      // We don't care about the response body — the server has done the
+      // apply (or flashed an error). We just want to land in the editor.
+      await fetch(form.action, {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "manual",
+      }).catch(() => {});
+    } finally {
+      window.location.assign(editorUrl);
+    }
+  });
+})();
+
+// =============================================================================
 // Per-decision autosave for the approve view.
 // One AJAX POST per click; the surrounding card updates on success.
 // =============================================================================

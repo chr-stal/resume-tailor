@@ -1,0 +1,70 @@
+{
+  "model": "claude-sonnet-4-6",
+  "resume_path": "input/resume.md",
+  "job_path": "input/job.txt",
+  "suggestions": [
+    {
+      "id": "s1",
+      "section": "Summary",
+      "type": "replace",
+      "original_text": "Backend engineer with 5 years of experience building distributed systems. Comfortable across the stack with a focus on Python, payments infrastructure, and developer tooling.",
+      "suggested_text": "Backend engineer with 5 years of experience building production distributed systems in Python and Go. Strong on-call and incident-response track record, comfortable owning multi-tenant services and reasoning about reliability under load.",
+      "rationale": "Pivots the summary from payments-flavored language to the infra-flavored language the JD uses (Go, multi-tenant, on-call, reliability under load) without inventing experience.",
+      "priority": "high"
+    },
+    {
+      "id": "s2",
+      "section": "Experience > Northwind Cloud",
+      "type": "replace",
+      "original_text": "- Worked on the payments team building backend services.",
+      "suggested_text": "- Designed and operated Python/Go backend services serving 80k req/s at p99 < 40ms, with strong observability via Datadog and structured logging.",
+      "rationale": "JD emphasizes production ownership and observability. Quantified throughput + Go mention align with the role.",
+      "priority": "high"
+    },
+    {
+      "id": "s3",
+      "section": "Experience > Northwind Cloud",
+      "type": "insert",
+      "original_text": "",
+      "suggested_text": "- Carried primary on-call; led the post-mortem for a multi-region outage that tightened the team's deploy-and-rollback playbook.",
+      "rationale": "JD explicitly asks for on-call and post-mortem experience. Anchored to a real situation rather than invented metrics.",
+      "priority": "high"
+    },
+    {
+      "id": "s4",
+      "section": "Experience > BlueOrbit Systems",
+      "type": "replace",
+      "original_text": "- Helped migrate a legacy monolith to a service-oriented architecture.",
+      "suggested_text": "- Co-led the cut-over of a Django monolith into focused Go and Python services on Kubernetes, including the Terraform modules and the rollout playbook.",
+      "rationale": "Adds Kubernetes and Terraform — both core to the JD — by re-anchoring on the same real migration.",
+      "priority": "high"
+    },
+    {
+      "id": "s5",
+      "section": "Skills",
+      "type": "replace",
+      "original_text": "Python, Go, PostgreSQL, Kafka, Kubernetes, AWS (EC2, S3, RDS, Lambda), Terraform, Docker, Linux, Git.",
+      "suggested_text": "Go, Python, Kubernetes, Terraform, PostgreSQL, gRPC, Kafka, AWS (EC2, S3, EKS, RDS, Lambda), Docker, Linux, Git.",
+      "rationale": "Lead with Go and Kubernetes (the JD's top stack), add gRPC, retain everything already present.",
+      "priority": "medium"
+    },
+    {
+      "id": "s6",
+      "section": "Projects > scratchpad-db",
+      "type": "replace",
+      "original_text": "A small key-value store I wrote in Go for fun. Implements a write-ahead log, basic compaction, and an HTTP API.",
+      "suggested_text": "A small key-value store I wrote in Go to learn storage internals. Implements a write-ahead log with crash recovery, size-tiered compaction, and an HTTP API. Useful here as evidence of dive-deep work into the durability patterns relevant to a cloud-infra backend.",
+      "rationale": "JD bonus: 'storage internals.' Re-phrasing the project to use that exact term lifts a 'for fun' project into a relevant signal.",
+      "priority": "low"
+    },
+    {
+      "id": "s7",
+      "section": "Experience > Quarry Labs",
+      "type": "delete",
+      "original_text": "- Contributed bug fixes to the company's open-source SDK.",
+      "suggested_text": "",
+      "rationale": "Internship bullet that doesn't move the needle for this JD; trims the resume.",
+      "priority": "low"
+    }
+  ]
+}

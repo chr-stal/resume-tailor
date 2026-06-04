@@ -7,12 +7,19 @@
 </nav>
 
 <section class="panel">
-  <h2>Tailor for a job (with Claude)</h2>
-  <p class="muted">Paste your resume and a job description. Claude proposes targeted edits; you approve them; the result is rendered to PDF.</p>
+  <h2>Tailor for a job{% if not demo_mode %} (with Claude){% endif %}</h2>
+  <p class="muted">
+    {% if demo_mode %}
+    The fields are pre-filled with a sample candidate and JD. Edit anything you like — when you click <em>Create run</em>, this turns into a fully editable session run. On the next page, clicking <em>Run review</em> loads mock suggestions (no API call). Everything is ephemeral to your browser session.
+    {% else %}
+    Paste your resume and a job description. Claude proposes targeted edits; you approve them; the result is rendered to PDF.
+    {% endif %}
+  </p>
   <form method="post" action="{{ url_for('create_run') }}" class="form-create">
     <label>
       <span>Run name</span>
       <input type="text" name="name" required pattern="[a-z0-9][a-z0-9_-]{0,63}"
+             value="{{ defaults.name or '' }}"
              placeholder="acme-pm-2026-05" autocomplete="off" autofocus>
       <small class="muted">lowercase letters, numbers, hyphens, underscores</small>
     </label>
@@ -20,13 +27,13 @@
     <label>
       <span>Resume (Markdown)</span>
       <textarea name="resume" rows="14" required
-                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;..."></textarea>
+                placeholder="# Your Name&#10;&#10;Contact line&#10;&#10;## Summary&#10;...">{{ defaults.resume or '' }}</textarea>
     </label>
 
     <label>
       <span>Job description (plain text)</span>
       <textarea name="jd" rows="14" required
-                placeholder="Paste the JD here…"></textarea>
+                placeholder="Paste the JD here…">{{ defaults.jd or '' }}</textarea>
     </label>
 
     <div class="form-actions">

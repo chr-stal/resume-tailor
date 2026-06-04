@@ -1,0 +1,8 @@
+{
+  "decisions": [
+    {"id": "s1", "action": "approve", "final_text": "Backend engineer with 5 years of Python experience building distributed systems for payments and billing. Strong PostgreSQL fundamentals, hands-on with event-driven architectures, and comfortable owning production services end-to-end including on-call."},
+    {"id": "s2", "action": "approve", "final_text": "- Designed and shipped Python services on the billing team, including idempotent invoice retries that recovered ~$2.4M/yr in transient failures."},
+    {"id": "s3", "action": "edit", "final_text": "- Cut p95 latency on the nightly invoicing batch from 88m to 14m by parallelizing PostgreSQL reads and rewriting the hot loop."},
+    {"id": "s4", "action": "deny", "final_text": ""}
+  ]
+}

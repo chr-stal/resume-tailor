@@ -11,17 +11,23 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
+import shutil
+import tempfile
+from functools import wraps
 from pathlib import Path
 
 from flask import (
     Flask,
     abort,
+    current_app,
     flash,
     jsonify,
     redirect,
     render_template,
     request,
     send_file,
+    session,
     url_for,
 )
 
@@ -50,9 +56,130 @@ from resume_tailor.state import (
 # resume_tailor/web/app.py — go up two levels to reach the project root.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNS_ROOT = PROJECT_ROOT / "runs"
+DEMO_RUNS_SRC = PROJECT_ROOT / "demo-runs"
+
+# Where session-scoped demo runs live. Lives in /tmp so it clears naturally on
+# container restart and never pollutes the project tree on local dev.
+DEMO_SESSIONS_ROOT = Path(tempfile.gettempdir()) / "resume-tailor-demo-sessions"
+
+# Names of baseline demo workdirs that are intentionally read-only — visitors
+# can browse them but can't mutate. (They're the showcase of "what the tool
+# produces" at different points.) Anything created by a visitor lives under
+# DEMO_SESSIONS_ROOT/<sid>/ and is freely mutable.
+DEMO_BASELINE_RUNS = {
+    "acme-staff-eng-completed",
+    "stripe-payments-in-progress",
+    "google-cloud-clickrun",
+}
 
 # Slugs for run names. Lowercase, no spaces, no path traversal.
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+
+
+# ---------------------------------------------------------------------------
+# Demo mode
+# ---------------------------------------------------------------------------
+
+# Workdir name → pre-staged suggestions file. When a user clicks "Run review"
+# on that workdir while DEMO_MODE is on, we copy the staged file into place
+# instead of calling Claude. Lets the "click → suggestions appear" moment
+# happen on a public demo without spending real API credits.
+DEMO_CLICKRUN_RUNS = {
+    "google-cloud-clickrun": "_demo-suggestions.json",
+}
+
+
+def _demo_sid() -> str:
+    """Return (or lazily mint) a session-scoped id for the current visitor.
+
+    Stored in the Flask signed session cookie. The id keys a per-visitor
+    directory under :data:`DEMO_SESSIONS_ROOT` where any new runs and
+    decisions land — keeping each visitor's experience isolated.
+    """
+    sid = session.get("demo_sid")
+    if not sid:
+        sid = secrets.token_urlsafe(8)
+        session["demo_sid"] = sid
+    return sid
+
+
+def _demo_session_root() -> Path:
+    """Per-visitor runs directory. Created on demand."""
+    root = DEMO_SESSIONS_ROOT / _demo_sid()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _is_session_workdir(wd: "Workdir") -> bool:
+    """True iff *wd* lives under the current visitor's demo-session dir."""
+    try:
+        wd.root.relative_to(DEMO_SESSIONS_ROOT)
+        return True
+    except ValueError:
+        return False
+
+
+def _demo_fork_if_baseline(wd: "Workdir", name: str) -> "Workdir":
+    """In demo mode, fork a baseline workdir to the visitor's session dir on
+    first mutation.
+
+    Reads always check the session dir first (see :func:`_wd_or_404`), so once
+    the fork exists every subsequent request — read or write — flows to the
+    session copy. The baseline on disk stays untouched and other visitors keep
+    seeing it as the canonical sample.
+    """
+    if not current_app.config.get("DEMO_MODE"):
+        return wd
+    if _is_session_workdir(wd):
+        return wd
+    session_root = _demo_session_root()
+    session_dir = session_root / name
+    if not session_dir.exists():
+        shutil.copytree(wd.root, session_dir)
+    return open_workdir(session_dir)
+
+
+def _seed_demo_runs(app: Flask) -> None:
+    """On first boot in demo mode, copy committed demo workdirs into runs/.
+
+    Idempotent: if a destination already exists we leave it alone. To force a
+    fresh state, delete the matching directory under ``runs/`` and restart.
+    """
+    if not app.config.get("DEMO_MODE"):
+        return
+    if not DEMO_RUNS_SRC.exists():
+        app.logger.info("demo mode: no demo-runs/ source directory; skipping seed")
+        return
+    RUNS_ROOT.mkdir(parents=True, exist_ok=True)
+    for src in DEMO_RUNS_SRC.iterdir():
+        if not src.is_dir():
+            continue
+        dst = RUNS_ROOT / src.name
+        if dst.exists():
+            continue
+        shutil.copytree(src, dst)
+        app.logger.info("demo mode: seeded %s", dst)
+
+
+def demo_blocked(action_label: str = "this action"):
+    """Decorator: in demo mode, swallow the call and flash a friendly message.
+
+    Apply to POST handlers that would mutate disk in ways the demo shouldn't
+    persist. JSON endpoints get a 200 + {"ok": true, "demo": true} so the
+    front-end can still light up; redirect endpoints bounce back where they
+    came from.
+    """
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if current_app.config.get("DEMO_MODE"):
+                if request.is_json or request.headers.get("Accept", "").startswith("application/json"):
+                    return jsonify({"ok": True, "demo": True}), 200
+                flash(f"Demo mode — {action_label} isn't persisted. Clone the repo to run for real.", "info")
+                return redirect(request.referrer or url_for("index"))
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +189,7 @@ SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = os.environ.get("RESUME_TAILOR_SECRET", "dev-resume-tailor")
+    app.config["DEMO_MODE"] = os.environ.get("RESUME_TAILOR_DEMO", "0") in ("1", "true", "True")
 
     # Pull ANTHROPIC_API_KEY from .env if present.
     try:
@@ -71,11 +199,21 @@ def create_app() -> Flask:
         pass
 
     RUNS_ROOT.mkdir(parents=True, exist_ok=True)
+    _seed_demo_runs(app)
+
+    @app.context_processor
+    def _inject_demo_flag():
+        return {"demo_mode": app.config.get("DEMO_MODE", False)}
 
     # ----- helpers -----
     def _wd_or_404(name: str) -> Workdir:
         if not SLUG_RE.match(name):
             abort(404)
+        # In demo mode, a visitor's session-scoped copy wins over the baseline.
+        if app.config.get("DEMO_MODE"):
+            sd = DEMO_SESSIONS_ROOT / _demo_sid() / name
+            if sd.exists() and sd.is_dir():
+                return open_workdir(sd)
         run_dir = RUNS_ROOT / name
         if not run_dir.exists() or not run_dir.is_dir():
             abort(404)
@@ -259,7 +397,21 @@ def create_app() -> Flask:
         runs = []
         for p in sorted(RUNS_ROOT.iterdir()) if RUNS_ROOT.exists() else []:
             if p.is_dir() and not p.name.startswith("."):
-                runs.append(_run_card(p))
+                card = _run_card(p)
+                card["is_session"] = False
+                runs.append(card)
+
+        # Demo mode: also surface the visitor's own session-scoped runs so they
+        # see what they created on this visit, separated visually from the
+        # read-only baseline samples.
+        if app.config.get("DEMO_MODE"):
+            session_root = DEMO_SESSIONS_ROOT / _demo_sid()
+            if session_root.exists():
+                for p in sorted(session_root.iterdir()):
+                    if p.is_dir() and not p.name.startswith("."):
+                        card = _run_card(p)
+                        card["is_session"] = True
+                        runs.append(card)
 
         # Default sort: most recently touched first.
         runs.sort(key=lambda r: r["mtime"], reverse=True)
@@ -275,12 +427,35 @@ def create_app() -> Flask:
     @app.route("/runs/new")
     def new_run_form():
         """Standalone page for the LLM-driven create flow."""
-        return render_template("new_run.html")
+        defaults = _demo_autofill_defaults() if app.config.get("DEMO_MODE") else {}
+        return render_template("new_run.html", defaults=defaults)
 
     @app.route("/runs/new-markdown")
     def new_markdown_form():
         """Standalone page for the Markdown-only create flow."""
-        return render_template("new_markdown.html")
+        defaults = _demo_autofill_defaults() if app.config.get("DEMO_MODE") else {}
+        return render_template("new_markdown.html", defaults=defaults)
+
+    def _demo_autofill_defaults() -> dict:
+        """Pull resume + JD content from one of the baseline demo workdirs to
+        pre-populate the new-run form, and mint a unique-ish run name so two
+        visitors don't collide on the default."""
+        sample_dir = DEMO_RUNS_SRC / "google-cloud-clickrun"
+        resume_md = ""
+        job_txt = ""
+        try:
+            resume_md = (sample_dir / "input" / "resume.md").read_text(encoding="utf-8")
+            job_txt = (sample_dir / "input" / "job.txt").read_text(encoding="utf-8")
+        except FileNotFoundError:
+            pass
+        suffix = secrets.token_urlsafe(4).lower().replace("_", "-").replace("=", "")
+        suffix = re.sub(r"[^a-z0-9-]", "-", suffix)[:6] or "demo"
+        return {
+            "name": f"try-it-now-{suffix}",
+            "resume": resume_md,
+            "jd": job_txt,
+            "markdown": resume_md,
+        }
 
     @app.route("/runs", methods=["POST"])
     def create_run():
@@ -293,13 +468,32 @@ def create_app() -> Flask:
         if not resume.strip() or not jd.strip():
             flash("Both resume and job description are required.", "error")
             return redirect(url_for("index"))
-        run_dir = RUNS_ROOT / name
+
+        if app.config.get("DEMO_MODE"):
+            # New runs in demo mode live under the visitor's session dir.
+            session_root = _demo_session_root()
+            if name in DEMO_BASELINE_RUNS:
+                flash(f"'{name}' is reserved for a baseline demo run. Pick another name.", "error")
+                return redirect(url_for("new_run_form"))
+            run_dir = session_root / name
+        else:
+            run_dir = RUNS_ROOT / name
+
         if run_dir.exists():
             flash(f"Run '{name}' already exists.", "error")
             return redirect(url_for("index"))
+
         wd = open_workdir(run_dir)
         write_text_atomic(wd.resume_md, resume.rstrip() + "\n")
         write_text_atomic(wd.job_txt, jd.rstrip() + "\n")
+
+        # Pre-stage mock suggestions in demo mode so that 'Run review' has
+        # something to load (the model never gets called).
+        if app.config.get("DEMO_MODE"):
+            mock = DEMO_RUNS_SRC / "google-cloud-clickrun" / "_demo-suggestions.json"
+            if mock.exists():
+                (wd.root / "_demo-suggestions.json").write_bytes(mock.read_bytes())
+
         flash(f"Created run '{name}'.", "success")
         return redirect(url_for("run_view", name=name))
 
@@ -320,7 +514,15 @@ def create_app() -> Flask:
         if not markdown.strip():
             flash("Markdown content is required.", "error")
             return redirect(url_for("index"))
-        run_dir = RUNS_ROOT / name
+
+        if app.config.get("DEMO_MODE"):
+            if name in DEMO_BASELINE_RUNS:
+                flash(f"'{name}' is reserved for a baseline demo run. Pick another name.", "error")
+                return redirect(url_for("new_markdown_form"))
+            run_dir = _demo_session_root() / name
+        else:
+            run_dir = RUNS_ROOT / name
+
         if run_dir.exists():
             flash(f"Run '{name}' already exists.", "error")
             return redirect(url_for("index"))
@@ -356,6 +558,24 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/review", methods=["POST"])
     def run_review_route(name):
         wd = _wd_or_404(name)
+
+        if app.config.get("DEMO_MODE"):
+            # In demo mode the model is never called. Both the baseline
+            # click-to-run workdir and visitor-created session runs have a
+            # _demo-suggestions.json sitting beside them — we just copy it in
+            # to simulate "the review just ran."
+            staged = wd.root / "_demo-suggestions.json"
+            if not staged.exists():
+                flash(
+                    "Demo mode — review isn't run for this read-only sample. "
+                    "Create your own run via '+ Tailor for a job' to try it.",
+                    "info",
+                )
+                return redirect(url_for("run_view", name=name))
+            wd.suggestions_json.write_bytes(staged.read_bytes())
+            flash("Demo: mock suggestions loaded (no API call was made).", "success")
+            return redirect(url_for("run_view", name=name))
+
         force = request.form.get("force") == "1"
         try:
             run_review(wd, wd.resume_md, wd.job_txt, force=force)
@@ -367,6 +587,7 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/apply", methods=["POST"])
     def run_apply_route(name):
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
         nxt = request.args.get("next") or request.form.get("next")
         try:
             run_apply(wd)
@@ -381,6 +602,7 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/build", methods=["POST"])
     def run_build_route(name):
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
         html_only = request.form.get("html_only") == "1"
         try:
             run_build(wd, html_only=html_only)
@@ -410,6 +632,7 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/decisions/<sid>", methods=["POST"])
     def save_decision(name, sid):
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
         body = request.get_json(silent=True) or {}
         action = body.get("action")
         final_text = body.get("final_text", "")
@@ -430,6 +653,7 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/decisions/<sid>", methods=["DELETE"])
     def clear_decision(name, sid):
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
         if not wd.suggestions_json.exists():
             return jsonify({"ok": True, "summary": _decision_summary({})})
         suggestions = read_json(wd.suggestions_json).get("suggestions", [])
@@ -444,6 +668,7 @@ def create_app() -> Flask:
         wd = _wd_or_404(name)
 
         if request.method == "POST":
+            wd = _demo_fork_if_baseline(wd, name)
             text = request.form.get("content") or ""
             write_text_atomic(wd.final_md, text)
 
@@ -491,6 +716,7 @@ def create_app() -> Flask:
         wd = _wd_or_404(name)
 
         if request.method == "POST":
+            wd = _demo_fork_if_baseline(wd, name)
             new_style: dict = {}
             errors: list[str] = []
             for k in DEFAULT_STYLE:
@@ -559,6 +785,7 @@ def create_app() -> Flask:
     @app.route("/runs/<name>/meta", methods=["POST"])
     def update_meta(name):
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
         meta = _load_meta(wd)
         raw = request.form.get("pdf_filename", "")
         default = f"{wd.root.name}-resume.pdf"
@@ -573,6 +800,7 @@ def create_app() -> Flask:
         the PDF view. Designed to be POSTed with formtarget="_blank" so the
         PDF opens in a new tab while the caller stays where it was."""
         wd = _wd_or_404(name)
+        wd = _demo_fork_if_baseline(wd, name)
 
         raw = (request.form.get("pdf_filename") or "").strip()
         if raw:

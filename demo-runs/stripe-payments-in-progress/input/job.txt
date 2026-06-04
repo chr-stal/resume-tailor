@@ -1,0 +1,20 @@
+Backend Engineer — Billing Systems
+Atlas Commerce
+
+We're building the next generation of subscription billing infrastructure for
+B2B SaaS companies. We're hiring a Backend Engineer to own pieces of the
+metering, invoicing, and dunning pipelines.
+
+What you'll do:
+- Design and ship backend services in Python on the billing platform.
+- Improve invoicing reliability, focused on retries, idempotency, and recovery.
+- Partner with finance and customer success to reduce dunning churn.
+- Take part in the on-call rotation for billing systems.
+
+What we look for:
+- 3+ years of backend experience, primarily in Python.
+- Strong PostgreSQL fundamentals; comfort with event-driven systems.
+- Has owned a production service, including its observability.
+- Bonus: experience with billing, payments, or other regulated domains.
+
+Tech: Python, PostgreSQL, Temporal, Kafka, Kubernetes, AWS, Datadog.

@@ -1,0 +1,13 @@
+{
+  "decisions": [
+    {"id": "s1", "action": "approve", "final_text": "Senior backend engineer with 5+ years of Python experience building high-throughput distributed systems. Track record of operating revenue-critical payment services on-call, partnering with risk and finance teams, and driving incremental migrations from legacy monoliths to focused services."},
+    {"id": "s2", "action": "approve", "final_text": "- Designed and shipped Python services on the payments team, including invoice-retry logic that recovered ~$2.4M/yr in transient declines."},
+    {"id": "s3", "action": "approve", "final_text": "- Cut p95 latency on the nightly billing batch from 88m to 14m by parallelizing PostgreSQL reads and rewriting the hot loop in Go."},
+    {"id": "s4", "action": "edit", "final_text": "- Carried primary on-call for the billing service; reduced page volume ~30% by replacing raw error-rate alerts with SLO-based alerting in Datadog."},
+    {"id": "s5", "action": "approve", "final_text": "- Built and operated the rate-limited public API in Python (used by 200+ partner integrations), including JWT auth, request shaping, and Kafka-backed audit logging."},
+    {"id": "s6", "action": "approve", "final_text": "- Led the cut-over of the user-billing module out of a legacy Django monolith into a focused Python service, with a feature-flagged dual-write phase to de-risk the migration."},
+    {"id": "s7", "action": "deny", "final_text": ""},
+    {"id": "s8", "action": "approve", "final_text": "Python, Go, PostgreSQL, Kafka, Kubernetes, AWS (EC2, S3, RDS, Lambda, SQS), Terraform, Docker, Datadog, Linux, Git."},
+    {"id": "s9", "action": "deny", "final_text": ""}
+  ]
+}

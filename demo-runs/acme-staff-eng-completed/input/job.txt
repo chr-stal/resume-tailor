@@ -1,0 +1,22 @@
+Senior Staff Software Engineer — Payments Platform
+Northwind Cloud
+
+We're hiring a Senior Staff Software Engineer for our Payments Platform team.
+You will own critical pieces of the system that move money through the product
+and partner closely with risk, fraud, and finance teams.
+
+What you'll do:
+- Design, build, and operate high-throughput payment services in Python.
+- Drive the reliability and observability of the billing and invoicing pipeline.
+- Lead the design of new subsystems and review the work of engineers on the team.
+- Drive incremental migrations from the legacy monolith to focused services.
+- Carry primary on-call for revenue-critical services.
+
+What we're looking for:
+- 5+ years of backend experience, with significant time in Python.
+- Production on-call experience for revenue-critical systems.
+- Comfort with PostgreSQL, Kafka, and event-driven architectures.
+- A track record of mentoring teammates and raising the bar on code quality.
+- Bonus: prior experience with payments, billing, or any regulated domain.
+
+Tech you'll touch: Python, PostgreSQL, Kafka, Kubernetes, AWS, Datadog.

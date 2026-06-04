@@ -1,0 +1,88 @@
+{
+  "model": "claude-sonnet-4-6",
+  "resume_path": "input/resume.md",
+  "job_path": "input/job.txt",
+  "suggestions": [
+    {
+      "id": "s1",
+      "section": "Summary",
+      "type": "replace",
+      "original_text": "Backend engineer with 5 years of experience building distributed systems. Comfortable across the stack with a focus on Python, payments infrastructure, and developer tooling.",
+      "suggested_text": "Backend engineer with 5 years of Python experience building distributed systems for payments and billing. Strong PostgreSQL fundamentals, hands-on with event-driven architectures, and comfortable owning production services end-to-end including on-call.",
+      "rationale": "Mirrors the JD's required-skills list (Python, PostgreSQL, event-driven, on-call) without inflating experience.",
+      "priority": "high"
+    },
+    {
+      "id": "s2",
+      "section": "Experience > Northwind Cloud",
+      "type": "replace",
+      "original_text": "- Worked on the payments team building backend services.",
+      "suggested_text": "- Designed and shipped Python services on the billing team, including idempotent invoice retries that recovered ~$2.4M/yr in transient failures.",
+      "rationale": "JD calls out retries, idempotency, and recovery explicitly. Re-wording the bullet to anchor on those exact words is a high-value alignment.",
+      "priority": "high"
+    },
+    {
+      "id": "s3",
+      "section": "Experience > Northwind Cloud",
+      "type": "replace",
+      "original_text": "- Improved the speed of a slow batch job.",
+      "suggested_text": "- Cut p95 latency on the nightly invoicing batch from 88m to 14m by parallelizing PostgreSQL reads.",
+      "rationale": "Concrete numbers, mentions PostgreSQL (JD tech stack), and ties to invoicing.",
+      "priority": "high"
+    },
+    {
+      "id": "s4",
+      "section": "Experience > Northwind Cloud",
+      "type": "insert",
+      "original_text": "",
+      "suggested_text": "- Carried primary on-call for the billing service; reduced page volume ~30% by replacing raw error-rate alerts with SLO-based alerting in Datadog.",
+      "rationale": "JD asks for on-call participation and lists Datadog in the tech stack.",
+      "priority": "high"
+    },
+    {
+      "id": "s5",
+      "section": "Experience > BlueOrbit Systems",
+      "type": "replace",
+      "original_text": "- Built REST endpoints in Python for the public API.",
+      "suggested_text": "- Built and operated the rate-limited public API in Python, including Kafka-backed audit logging and an event-driven webhook fan-out.",
+      "rationale": "Adds Kafka and event-driven (both in the JD), and surfaces production ownership.",
+      "priority": "medium"
+    },
+    {
+      "id": "s6",
+      "section": "Experience > Quarry Labs",
+      "type": "delete",
+      "original_text": "- Contributed bug fixes to the company's open-source SDK.",
+      "suggested_text": "",
+      "rationale": "Internship bullet that doesn't move the needle for this JD; trims to keep the resume tight.",
+      "priority": "low"
+    },
+    {
+      "id": "s7",
+      "section": "Skills",
+      "type": "replace",
+      "original_text": "Python, Go, PostgreSQL, Kafka, Kubernetes, AWS (EC2, S3, RDS, Lambda), Terraform, Docker, Linux, Git.",
+      "suggested_text": "Python, Go, PostgreSQL, Kafka, Temporal, Kubernetes, AWS (EC2, S3, RDS, Lambda, SQS), Terraform, Docker, Datadog, Linux, Git.",
+      "rationale": "Adds Temporal and Datadog, both in the JD tech stack and reasonable given the existing experience.",
+      "priority": "medium"
+    },
+    {
+      "id": "s8",
+      "section": "Summary",
+      "type": "insert",
+      "original_text": "",
+      "suggested_text": "Particular interest in dunning workflows and revenue-recovery patterns.",
+      "rationale": "JD specifically mentions dunning. This adds a one-liner of intent that helps the resume signal fit without inventing experience.",
+      "priority": "low"
+    },
+    {
+      "id": "s9",
+      "section": "Projects > scratchpad-db",
+      "type": "replace",
+      "original_text": "A small key-value store I wrote in Go for fun. Implements a write-ahead log, basic compaction, and an HTTP API.",
+      "suggested_text": "A small key-value store I wrote in Go to learn storage internals. Implements a write-ahead log with crash recovery, size-tiered compaction, and an HTTP API.",
+      "rationale": "Adds the words 'crash recovery' which map to the JD's reliability emphasis, without inventing scope.",
+      "priority": "low"
+    }
+  ]
+}
